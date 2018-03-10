@@ -12,3 +12,6 @@ erpnext/docs/current
 *.swo
 __pycache__
 *~
+
+# VSCode settings
+.vscode/
