@@ -65,8 +65,8 @@ class PurchaseInvoice(BuyingController):
 		self.validate_with_previous_doc()
 		self.validate_uom_is_integer("uom", "qty")
 		self.validate_uom_is_integer("stock_uom", "stock_qty")
-		self.set_expense_account(for_validate=True)
-		self.set_against_expense_account()
+		self.set_account(for_validate=True)
+		self.set_against_accounts()
 		self.validate_write_off_account()
 		self.validate_multiple_billing("Purchase Receipt", "pr_detail", "amount", "items")
 		self.validate_fixed_asset()
@@ -173,7 +173,7 @@ class PurchaseInvoice(BuyingController):
 			if not d.item_code:
 				frappe.msgprint(_("Item Code required at Row No {0}").format(d.idx), raise_exception=True)
 
-	def set_expense_account(self, for_validate=False):
+	def set_account(self, for_validate=False):
 		auto_accounting_for_stock = erpnext.is_perpetual_inventory_enabled(self.company)
 
 		if auto_accounting_for_stock:
@@ -193,23 +193,27 @@ class PurchaseInvoice(BuyingController):
 			if auto_accounting_for_stock and item.item_code in stock_items \
 				and self.is_opening == 'No' and not item.is_fixed_asset \
 				and (not item.po_detail or
-					not frappe.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")):
+					not frappe.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")) \
+				and not item.is_refundable:
 
 				if self.update_stock:
 					item.expense_account = warehouse_account[item.warehouse]["account"]
 				else:
 					item.expense_account = stock_not_billed_account
-
-			elif not item.expense_account and for_validate:
+			elif item.is_refundable and not item.receivable_account and for_validate:
+				throw(_("Receivable account is mandatory for item {0}").format(item.item_code or item.item_name))
+			elif not item.is_refundable and not item.expense_account and for_validate:
 				throw(_("Expense account is mandatory for item {0}").format(item.item_code or item.item_name))
 
-	def set_against_expense_account(self):
+	def set_against_accounts(self):
 		against_accounts = []
 		for item in self.get("items"):
-			if item.expense_account not in against_accounts:
+			if item.is_refundable and item.receivable_account not in against_accounts:
+				against_accounts.append(item.receivable_account)
+			elif not item.is_refundable and item.expense_account not in against_accounts:
 				against_accounts.append(item.expense_account)
 
-		self.against_expense_account = ",".join(against_accounts)
+		self.against_accounts = ",".join(against_accounts)
 
 	def po_required(self):
 		if frappe.db.get_value("Buying Settings", None, "po_required") == 'Yes':
@@ -404,7 +408,7 @@ class PurchaseInvoice(BuyingController):
 					"account": self.credit_to,
 					"party_type": "Supplier",
 					"party": self.supplier,
-					"against": self.against_expense_account,
+					"against": self.against_accounts,
 					"credit": grand_total_in_company_currency,
 					"credit_in_account_currency": grand_total_in_company_currency \
 						if self.party_account_currency==self.company_currency else grand_total,
@@ -430,16 +434,29 @@ class PurchaseInvoice(BuyingController):
 					warehouse_debit_amount = flt(flt(item.valuation_rate, val_rate_db_precision)
 						* flt(item.qty)	* flt(item.conversion_factor), item.precision("base_net_amount"))
 
-					gl_entries.append(
-						self.get_gl_dict({
-							"account": item.expense_account,
-							"against": self.supplier,
-							"debit": warehouse_debit_amount,
-							"remarks": self.get("remarks") or _("Accounting Entry for Stock"),
-							"cost_center": item.cost_center,
-							"project": item.project
-						}, account_currency)
-					)
+					if item.is_refundable:
+						gl_entries.append(
+							self.get_gl_dict({
+								"account": item.receivable_account,
+								"party": self.supplier,
+								"party_type": "Supplier",
+								"debit": warehouse_debit_amount,
+								"remarks": self.get("remarks") or _("Accounting Entry for Stock"),
+								"cost_center": item.cost_center,
+								"project": item.project
+							}, account_currency)
+						)
+					else:
+						gl_entries.append(
+							self.get_gl_dict({
+								"account": item.expense_account,
+								"against": self.supplier,
+								"debit": warehouse_debit_amount,
+								"remarks": self.get("remarks") or _("Accounting Entry for Stock"),
+								"cost_center": item.cost_center,
+								"project": item.project
+							}, account_currency)
+						)
 
 					# Amount added through landed-cost-voucher
 					if flt(item.landed_cost_voucher_amount):
@@ -466,18 +483,33 @@ class PurchaseInvoice(BuyingController):
 							"credit": flt(item.rm_supp_cost)
 						}, warehouse_account[self.supplier_warehouse]["account_currency"]))
 				else:
-					gl_entries.append(
-						self.get_gl_dict({
-							"account": item.expense_account,
-							"against": self.supplier,
-							"debit": flt(item.base_net_amount, item.precision("base_net_amount")),
-							"debit_in_account_currency": (flt(item.base_net_amount,
-								item.precision("base_net_amount")) if account_currency==self.company_currency
-								else flt(item.net_amount, item.precision("net_amount"))),
-							"cost_center": item.cost_center,
-							"project": item.project
-						}, account_currency)
-					)
+					if item.is_refundable:
+						gl_entries.append(
+							self.get_gl_dict({
+								"account": item.receivable_account,
+								"party": self.supplier,
+								"party_type": "Supplier",
+								"debit": flt(item.base_net_amount, item.precision("base_net_amount")),
+								"debit_in_account_currency": (flt(item.base_net_amount,
+									item.precision("base_net_amount")) if account_currency==self.company_currency
+									else flt(item.net_amount, item.precision("net_amount"))),
+								"cost_center": item.cost_center,
+								"project": item.project
+							}, account_currency)
+						)
+					else:
+						gl_entries.append(
+							self.get_gl_dict({
+								"account": item.expense_account,
+								"against": self.supplier,
+								"debit": flt(item.base_net_amount, item.precision("base_net_amount")),
+								"debit_in_account_currency": (flt(item.base_net_amount,
+									item.precision("base_net_amount")) if account_currency==self.company_currency
+									else flt(item.net_amount, item.precision("net_amount"))),
+								"cost_center": item.cost_center,
+								"project": item.project
+							}, account_currency)
+						)
 
 			if self.auto_accounting_for_stock and self.is_opening == "No" and \
 				item.item_code in stock_items and item.item_tax_amount:
