@@ -693,6 +693,7 @@ class PurchaseInvoice(BuyingController):
 		if self.update_stock == 1:
 			self.update_stock_ledger()
 
+		self.set_against_accounts()
 		self.make_gl_entries_on_cancel()
 		self.update_project()
 		self.update_fixed_asset()
