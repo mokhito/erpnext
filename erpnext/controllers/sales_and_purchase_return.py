@@ -279,7 +279,8 @@ def make_return_doc(doctype, source_name, target_doc=None):
 			"doctype": doctype + " Item",
 			"field_map": {
 				"serial_no": "serial_no",
-				"batch_no": "batch_no"
+				"batch_no": "batch_no",
+				"is_refundable": "is_refundable"
 			},
 			"postprocess": update_item
 		},
