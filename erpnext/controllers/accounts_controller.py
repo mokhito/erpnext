@@ -225,7 +225,7 @@ class AccountsController(TransactionBase):
 								(1.0 - (flt(item.discount_percentage) / 100.0)), item.precision("rate"))
 
 			if self.doctype == "Purchase Invoice":
-				self.set_expense_account(for_validate)
+				self.set_account(for_validate)
 
 	def set_taxes(self):
 		if not self.meta.get_field("taxes"):
