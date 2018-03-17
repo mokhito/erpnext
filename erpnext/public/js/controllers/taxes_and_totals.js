@@ -202,12 +202,14 @@ erpnext.taxes_and_totals = erpnext.payments.extend({
 		var me = this;
 		this.frm.doc.total = this.frm.doc.base_total = this.frm.doc.net_total = this.frm.doc.base_net_total = 0.0;
 
+		var rounded_totals = cint(this.frm.doc.use_rounded_item_totals);
+
 		$.each(this.frm.doc["items"] || [], function(i, item) {
-			me.frm.doc.total += item.amount;
-			me.frm.doc.base_total += item.base_amount;
-			me.frm.doc.net_total += item.net_amount;
-			me.frm.doc.base_net_total += item.base_net_amount;
-			});
+			me.frm.doc.total += rounded_totals ? flt(item.amount, 2) : item.amount;
+			me.frm.doc.base_total += rounded_totals ? flt(item.base_amount, 2) : item.base_amount;
+			me.frm.doc.net_total += rounded_totals ? flt(item.net_amount, 2) : item.net_amount;
+			me.frm.doc.base_net_total += rounded_totals ? flt(item.base_net_amount, 2) : item.base_net_amount;
+		});
 
 
 		frappe.model.round_floats_in(this.frm.doc, ["total", "base_total", "net_total", "base_net_total"]);
