@@ -7,7 +7,7 @@ from frappe import _
 
 from frappe.utils import cint, today, formatdate
 import frappe.defaults
-
+from frappe.cache_manager import clear_defaults_cache
 
 from frappe.model.document import Document
 from frappe.contacts.address_and_contact import load_address_and_contact
@@ -122,6 +122,7 @@ class Company(Document):
 						if not wh_detail["is_group"] else ""
 				})
 				warehouse.flags.ignore_permissions = True
+				warehouse.flags.ignore_mandatory = True
 				warehouse.insert()
 
 	def create_default_accounts(self):
@@ -185,6 +186,36 @@ class Company(Document):
 		if not self.default_payable_account:
 			self.db_set("default_payable_account", self.default_payable_account)
 
+		if not self.default_payroll_payable_account:
+			payroll_payable_account = frappe.db.get_value("Account",
+				{"account_name": _("Payroll Payable"), "company": self.name, "is_group": 0})
+
+			self.db_set("default_payroll_payable_account", payroll_payable_account)
+
+		if not self.default_employee_advance_account:
+			employe_advance_account = frappe.db.get_value("Account",
+				{"account_name": _("Employee Advances"), "company": self.name, "is_group": 0})
+
+			self.db_set("default_employee_advance_account", employe_advance_account)
+
+		if not self.write_off_account:
+			write_off_acct = frappe.db.get_value("Account",
+				{"account_name": _("Write Off"), "company": self.name, "is_group": 0})
+
+			self.db_set("write_off_account", write_off_acct)
+
+		if not self.exchange_gain_loss_account:
+			exchange_gain_loss_acct = frappe.db.get_value("Account",
+				{"account_name": _("Exchange Gain/Loss"), "company": self.name, "is_group": 0})
+
+			self.db_set("exchange_gain_loss_account", exchange_gain_loss_acct)
+
+		if not self.disposal_account:
+			disposal_acct = frappe.db.get_value("Account",
+				{"account_name": _("Gain/Loss on Asset Disposal"), "company": self.name, "is_group": 0})
+
+			self.db_set("disposal_account", disposal_acct)
+
 	def _set_default_account(self, fieldname, account_type):
 		if self.get(fieldname):
 			return
@@ -240,7 +271,7 @@ class Company(Document):
 		frappe.db.sql("""update `tabDefaultValue` set defvalue=%s
 			where defkey='Company' and defvalue=%s""", (newdn, olddn))
 
-		frappe.defaults.clear_cache()
+		clear_defaults_cache()
 
 	def abbreviate(self):
 		self.abbr = ''.join([c[0].upper() for c in self.company_name.split()])
