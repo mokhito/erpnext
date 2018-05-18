@@ -69,7 +69,13 @@ class calculate_taxes_and_totals(object):
 						if item.rate_with_margin > 0 else item.rate
 
 				item.net_rate = item.rate
-				item.amount = flt(item.rate * item.qty,	item.precision("amount"))
+
+				total_precision = item.precision("amount")
+
+				if self.doc.doctype == "Purchase Invoice" and cint(self.doc.use_rounded_item_totals):
+					total_precision = 2
+
+				item.amount = flt(item.rate * item.qty,	total_precision)
 				item.net_amount = item.amount
 
 				self._set_in_company_currency(item, ["price_list_rate", "rate", "net_rate", "amount", "net_amount"])
