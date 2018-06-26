@@ -112,8 +112,8 @@ def apply_pricing_rule(args):
 
 	item_list = args.get("items")
 	args.pop("items")
-	
-	set_serial_nos_based_on_fifo = frappe.db.get_single_value("Stock Settings", 
+
+	set_serial_nos_based_on_fifo = frappe.db.get_single_value("Stock Settings",
 		"automatically_set_serial_nos_based_on_fifo")
 
 	for item in item_list:
@@ -123,7 +123,7 @@ def apply_pricing_rule(args):
 		if set_serial_nos_based_on_fifo and not args.get('is_return'):
 			out.append(get_serial_no_for_item(args_copy))
 	return out
-	
+
 def get_serial_no_for_item(args):
 	from erpnext.stock.get_item_details import get_serial_no
 
@@ -144,7 +144,7 @@ def get_pricing_rule_for_item(args):
 		"name": args.name,
 		"pricing_rule": None
 	})
-	
+
 	if args.ignore_pricing_rule or not args.item_code:
 		if frappe.db.exists(args.doctype, args.name) and args.get("pricing_rule"):
 			item_details = remove_pricing_rule_for_item(args.get("pricing_rule"), item_details)
@@ -176,31 +176,15 @@ def get_pricing_rule_for_item(args):
 
 	if pricing_rule:
 		item_details.pricing_rule = pricing_rule.name
-		item_details.pricing_rule_for = pricing_rule.rate_or_discount
-
-		if pricing_rule.margin_type == 'Amount' and pricing_rule.currency == args.currency:
-			item_details.margin_type = pricing_rule.margin_type
-			item_details.margin_rate_or_amount = pricing_rule.margin_rate_or_amount
-
-		elif pricing_rule.margin_type == 'Percentage':
-			item_details.margin_type = pricing_rule.margin_type
-			item_details.margin_rate_or_amount = pricing_rule.margin_rate_or_amount
-		else:
-			item_details.margin_type = None
-			item_details.margin_rate_or_amount = 0.0
-
-		if pricing_rule.rate_or_discount == 'Rate':
-			if pricing_rule.currency == args.currency:
-				item_details.update({
-					"price_list_rate": pricing_rule.rate,
-					"discount_percentage": 0.0
-				})
-
-			else:
-				item_details.update({
-					"price_list_rate": 0.0,
-					"discount_percentage": 0.0
-				})
+		item_details.pricing_rule_for = pricing_rule.price_or_discount
+		item_details.margin_type = pricing_rule.margin_type
+		item_details.margin_rate_or_amount = pricing_rule.margin_rate_or_amount
+		if pricing_rule.price_or_discount == "Price":
+			item_details.update({
+				"price_list_rate": (pricing_rule.price/flt(args.conversion_rate)) * (args.conversion_factor or 1.0) \
+					if args.conversion_rate else 0.0,
+				"discount_percentage": 0.0
+			})
 		else:
 			item_details.discount_percentage = pricing_rule.discount_percentage or args.discount_percentage
 
@@ -210,9 +194,9 @@ def get_pricing_rule_for_item(args):
 	return item_details
 
 def remove_pricing_rule_for_item(pricing_rule, item_details):
-	pricing_rule = frappe.db.get_value('Pricing Rule', pricing_rule, 
-		['rate_or_discount', 'margin_type'], as_dict=1)
-	if pricing_rule and pricing_rule.rate_or_discount == 'Discount Percentage':
+	pricing_rule = frappe.db.get_value('Pricing Rule', pricing_rule,
+		['price_or_discount', 'margin_type'], as_dict=1)
+	if pricing_rule and pricing_rule.price_or_discount == 'Discount Percentage':
 		item_details.discount_percentage = 0.0
 
 	if pricing_rule and pricing_rule.margin_type in ['Percentage', 'Amount']:
@@ -227,14 +211,14 @@ def remove_pricing_rule_for_item(pricing_rule, item_details):
 def remove_pricing_rules(item_list):
 	if isinstance(item_list, string_types):
 		item_list = json.loads(item_list)
-	
-	out = []	
+
+	out = []
 	for item in item_list:
 		item = frappe._dict(item)
 		out.append(remove_pricing_rule_for_item(item.get("pricing_rule"), item))
-		
+
 	return out
-	
+
 def get_pricing_rules(args):
 	def _get_tree_conditions(parenttype, allow_blank=True):
 		field = frappe.scrub(parenttype)
