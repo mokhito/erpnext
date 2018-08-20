@@ -213,6 +213,18 @@ $.extend(erpnext.item, {
 			}
 		}
 
+		frm.fields_dict['receivable_account'].get_query = function(doc) {
+			return {
+				query: "erpnext.controllers.queries.get_receivable_account"
+			}
+		}
+		
+		frm.fields_dict['payable_account'].get_query = function(doc) {
+			return {
+				query: "erpnext.controllers.queries.get_payable_account"
+			}
+		}
+
 		frm.fields_dict['buying_cost_center'].get_query = function(doc) {
 			return {
 				filters: { "is_group": 0 }
