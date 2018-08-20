@@ -142,6 +142,12 @@ erpnext.accounts.PurchaseInvoice = erpnext.buying.BuyingController.extend({
 		this.frm.refresh_fields();
 	},
 
+	// when this field is checked, it will refresh the invoice totals
+	use_rounded_item_totals: function() {
+		this.calculate_taxes_and_totals();
+		this.frm.refresh_fields();
+	},
+
 	write_off_amount: function() {
 		this.set_in_company_currency(this.frm.doc, ["write_off_amount"]);
 		this.calculate_outstanding_amount();
