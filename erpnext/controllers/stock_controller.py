@@ -11,6 +11,7 @@ from erpnext.accounts.general_ledger import make_gl_entries, delete_gl_entries, 
 from erpnext.controllers.accounts_controller import AccountsController
 from erpnext.stock.stock_ledger import get_valuation_rate
 from erpnext.stock import get_warehouse_account_map
+import datetime
 
 class StockController(AccountsController):
 	def validate(self):
@@ -179,14 +180,26 @@ class StockController(AccountsController):
 		'''Create batches if required. Called before submit'''
 		for d in self.items:
 			if d.get(warehouse_field) and not d.batch_no:
-				has_batch_no, create_new_batch = frappe.db.get_value('Item', d.item_code, ['has_batch_no', 'create_new_batch'])
+				has_batch_no, create_new_batch, has_expiry_date, shelf_life = frappe.db.get_value('Item', d.item_code, ['has_batch_no', 'create_new_batch', 'has_expiry_date', 'shelf_life'])
 				if has_batch_no and create_new_batch:
-					d.batch_no = frappe.get_doc(dict(
-						doctype='Batch',
-						item=d.item_code,
-						supplier=getattr(self, 'supplier', None),
-						reference_doctype=self.doctype,
-						reference_name=self.name)).insert().name
+					if has_expiry_date:
+						today = datetime.date.today()
+						expiry = today + datetime.timedelta(days=shelf_life)
+						d.batch_no = frappe.get_doc(dict(
+							doctype='Batch',
+							item=d.item_code,
+							manufacturing_date=today,
+							expiry_date=expiry,
+							supplier=getattr(self, 'supplier', None),
+							reference_doctype=self.doctype,
+							reference_name=self.name)).insert().name
+  				else:
+						d.batch_no = frappe.get_doc(dict(
+							doctype='Batch',
+							item=d.item_code,
+							supplier=getattr(self, 'supplier', None),
+							reference_doctype=self.doctype,
+							reference_name=self.name)).insert().name
 
 	def make_adjustment_entry(self, expected_gle, voucher_obj):
 		from erpnext.accounts.utils import get_stock_and_account_difference
