@@ -6,22 +6,16 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt, cint
-
+from frappe.model.naming import make_autoname
 
 class UnableToSelectBatchError(frappe.ValidationError): pass
 
 class Batch(Document):
 	def autoname(self):
-		'''Generate random ID for batch if not specified'''
+		'''Generate Batch ID from naming series if not specified'''
 		if not self.batch_id:
 			if frappe.db.get_value('Item', self.item, 'create_new_batch'):
-				temp = None
-				while not temp:
-					temp = frappe.generate_hash()[:7].upper()
-					if frappe.db.exists('Batch', temp):
-						temp = None
-
-				self.batch_id = temp
+				self.batch_id = make_autoname(self.naming_series)
 			else:
 				frappe.throw(_('Batch ID is mandatory'), frappe.MandatoryError)
 
