@@ -28,6 +28,10 @@ frappe.ui.form.on('Batch', {
 		frappe.db.get_value('Item', {name: frm.doc.item}, 'has_expiry_date', (r) => {
 			frm.toggle_reqd('expiry_date', r.has_expiry_date);
 		});
+		frappe.db.get_value('Item', {name: frm.doc.item}, 'create_new_batch', (r) => {
+			frm.toggle_reqd('batch_id', !r.create_new_batch);
+			frm.toggle_display('naming_series', r.create_new_batch);
+		});
 	},
 	make_dashboard: (frm) => {
 		if(!frm.is_new()) {
