@@ -193,7 +193,7 @@ class StockController(AccountsController):
 							supplier=getattr(self, 'supplier', None),
 							reference_doctype=self.doctype,
 							reference_name=self.name)).insert().name
-  				else:
+					else:
 						d.batch_no = frappe.get_doc(dict(
 							doctype='Batch',
 							item=d.item_code,
