@@ -470,7 +470,7 @@ $.extend(erpnext.item, {
 						fields: ["attribute_value"],
 						limit_start: 0,
 						limit_page_length: 500,
-						parent: "Item"
+						parent: "Item Attribute"
 					}
 				}).then((r) => {
 					if(r.message) {
@@ -591,7 +591,7 @@ $.extend(erpnext.item, {
 								["attribute_value", "like", term + "%"]
 							],
 							fields: ["attribute_value"],
-							parent: "Item"
+							parent: "Item Attribute"
 						},
 						callback: function(r) {
 							if (r.message) {
