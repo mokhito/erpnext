@@ -378,6 +378,12 @@ def get_data():
 				},
 				{
 					"type": "report",
+					"name": "Working Capital",
+					"is_query_report": True,
+					"doctype": "Purchase Invoice"
+				},
+				{
+					"type": "report",
 					"name": "Purchase Invoice Trends",
 					"is_query_report": True,
 					"doctype": "Purchase Invoice"
