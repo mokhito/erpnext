@@ -223,7 +223,9 @@ def get_basic_details(args, item):
 		"income_account": get_default_income_account(args, item),
 		"expense_account": get_default_expense_account(args, item),
 		"is_refundable": item.is_refundable,
+		"is_payable_tax": item.is_payable_tax,
 		"receivable_account": get_default_receivable_account(args, item),
+		"payable_tax_account": get_default_payable_tax_account(args, item),
 		"cost_center": get_default_cost_center(args, item),
 		'has_serial_no': item.has_serial_no,
 		'has_batch_no': item.has_batch_no,
@@ -295,6 +297,10 @@ def get_default_expense_account(args, item):
 def get_default_receivable_account(args, item):
 	return (item.receivable_account
 		or args.receivable_account)
+
+def get_default_payable_tax_account(args, item):
+	return (item.payable_tax_account
+		or args.payable_tax_account)
 
 def get_default_cost_center(args, item):
 	return (frappe.db.get_value("Project", args.get("project"), "cost_center")

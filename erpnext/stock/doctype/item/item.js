@@ -218,6 +218,12 @@ $.extend(erpnext.item, {
 				query: "erpnext.controllers.queries.get_receivable_account"
 			}
 		}
+
+		frm.fields_dict['payable_tax_account'].get_query = function(doc) {
+			return {
+				query: "erpnext.controllers.queries.get_payable_account"
+			}
+		}
 		
 		frm.fields_dict['payable_account'].get_query = function(doc) {
 			return {

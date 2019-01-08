@@ -194,7 +194,7 @@ class PurchaseInvoice(BuyingController):
 				and self.is_opening == 'No' and not item.is_fixed_asset \
 				and (not item.po_detail or
 						not frappe.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")) \
-				and not item.is_refundable:
+				and not item.is_refundable and not item.is_payable_tax:
 
 				if self.update_stock:
 					item.expense_account = warehouse_account[item.warehouse]["account"]
@@ -203,7 +203,9 @@ class PurchaseInvoice(BuyingController):
 
 			elif item.is_refundable and not item.receivable_account and for_validate:
 				throw(_("Receivable account is mandatory for item {0}").format(item.item_code or item.item_name))
-			elif not item.is_refundable and not item.expense_account and for_validate:
+			elif item.is_payable_tax and not item.payable_tax_account and for_validate:
+				throw(_("Payable Tax account is mandatory for item {0}").format(item.item_code or item.item_name))
+			elif not (item.is_refundable or item.is_payable_tax) and not item.expense_account and for_validate:
 				throw(_("Expense account is mandatory for item {0}").format(item.item_code or item.item_name))
 
 	def set_against_accounts(self):
@@ -211,7 +213,9 @@ class PurchaseInvoice(BuyingController):
 		for item in self.get("items"):
 			if item.is_refundable and item.receivable_account not in against_accounts:
 				against_accounts.append(item.receivable_account)
-			elif not item.is_refundable and item.expense_account not in against_accounts:
+			elif item.is_payable_tax and item.payable_tax_account not in against_accounts:
+				against_accounts.append(item.payable_tax_account)
+			elif not (item.is_refundable or item.is_payable_tax) and item.expense_account not in against_accounts:
 				against_accounts.append(item.expense_account)
 
 		self.against_accounts = ",".join(against_accounts)
@@ -450,6 +454,18 @@ class PurchaseInvoice(BuyingController):
 								"project": item.project
 							}, account_currency)
 						)
+					elif item.is_payable_tax:
+						gl_entries.append(
+							self.get_gl_dict({
+								"account": item.payable_tax_account,
+								"party": self.supplier,
+								"party_type": "Supplier",
+								"debit": warehouse_debit_amount,
+								"remarks": self.get("remarks") or _("Accounting Entry for Payable Tax"),
+								"cost_center": item.cost_center,
+								"project": item.project
+							}, account_currency)
+						)
 					else:
 						gl_entries.append(
 							self.get_gl_dict({
@@ -491,6 +507,20 @@ class PurchaseInvoice(BuyingController):
 						gl_entries.append(
 							self.get_gl_dict({
 								"account": item.receivable_account,
+								"party": self.supplier,
+								"party_type": "Supplier",
+								"debit": flt(item.base_net_amount, item.precision("base_net_amount")),
+								"debit_in_account_currency": (flt(item.base_net_amount,
+									item.precision("base_net_amount")) if account_currency==self.company_currency
+									else flt(item.net_amount, item.precision("net_amount"))),
+								"cost_center": item.cost_center,
+								"project": item.project
+							}, account_currency)
+						)
+					if item.is_payable_tax:
+						gl_entries.append(
+							self.get_gl_dict({
+								"account": item.payable_tax_account,
 								"party": self.supplier,
 								"party_type": "Supplier",
 								"debit": flt(item.base_net_amount, item.precision("base_net_amount")),
