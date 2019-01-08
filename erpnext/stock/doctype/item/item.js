@@ -221,7 +221,7 @@ $.extend(erpnext.item, {
 
 		frm.fields_dict['payable_tax_account'].get_query = function(doc) {
 			return {
-				query: "erpnext.controllers.queries.get_payable_account"
+				query: "erpnext.controllers.queries.get_all_accounts"
 			}
 		}
 		
