@@ -411,6 +411,23 @@ def get_payable_account(doctype, txt, searchfield, start, page_len, filters):
 				'company': filters.get("company", "")
 			})
 
+@frappe.whitelist()
+def get_all_accounts(doctype, txt, searchfield, start, page_len, filters):
+	from erpnext.controllers.queries import get_match_cond
+	if not filters: filters = {}
+	condition = ""
+	if filters.get("company"):
+		condition += "and tabAccount.company = %(company)s"
+	return frappe.db.sql("""select tabAccount.name from `tabAccount`
+			where tabAccount.is_group=0
+				and tabAccount.`{key}` LIKE %(txt)s
+				{condition} {match_condition}
+			order by idx desc, name"""
+			.format(condition=condition, match_condition=get_match_cond(doctype), key=searchfield), {
+				'txt': "%%%s%%" % frappe.db.escape(txt),
+				'company': filters.get("company", "")
+			})
+
 
 @frappe.whitelist()
 def warehouse_query(doctype, txt, searchfield, start, page_len, filters):
