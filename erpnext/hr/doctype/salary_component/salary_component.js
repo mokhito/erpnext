@@ -5,7 +5,7 @@ frappe.ui.form.on('Salary Component', {
 	setup: function(frm) {
 		frm.set_query("default_account", "accounts", function(doc, cdt, cdn) {
 			var d = locals[cdt][cdn];
-			var root_types = ["Expense", "Liability"];
+			var root_types = ["Expense", "Liability", "Income"];
 			return {
 				filters: {
 					"root_type": ["in", root_types],
