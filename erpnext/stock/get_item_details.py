@@ -197,7 +197,7 @@ def get_basic_details(args, item):
 	user_default_warehouse = user_default_warehouse_list[0] \
 		if len(user_default_warehouse_list) == 1 else ""
 
-	warehouse = user_default_warehouse or item.default_warehouse or args.warehouse
+	warehouse = args.warehouse or user_default_warehouse or item.default_warehouse
 
 	material_request_type = ''
 	if args.get('doctype') == "Material Request":
