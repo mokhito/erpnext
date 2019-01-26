@@ -294,12 +294,13 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 	item_code: function(doc, cdt, cdn, from_barcode) {
 		var me = this;
 		var item = frappe.get_doc(cdt, cdn);
-		var update_stock = 0, show_batch_dialog = 0;
+    var update_stock = 0, show_batch_dialog = 0;
+    var warehouse = item.warehouse;
 
 		if(['Sales Invoice'].includes(this.frm.doc.doctype)) {
 			update_stock = cint(me.frm.doc.update_stock);
-			show_batch_dialog = update_stock;
-
+      show_batch_dialog = update_stock;
+      warehouse = me.frm.doc.default_source_warehouse;
 		} else if((this.frm.doc.doctype === 'Purchase Receipt' && me.frm.doc.is_return) ||
 			this.frm.doc.doctype === 'Delivery Note') {
 			show_batch_dialog = 1;
@@ -321,7 +322,7 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 							item_code: item.item_code,
 							barcode: item.barcode,
 							serial_no: item.serial_no,
-							warehouse: item.warehouse,
+							warehouse: warehouse,
 							customer: me.frm.doc.customer,
 							supplier: me.frm.doc.supplier,
 							currency: me.frm.doc.currency,
