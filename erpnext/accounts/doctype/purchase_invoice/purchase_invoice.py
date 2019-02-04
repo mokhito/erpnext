@@ -517,7 +517,7 @@ class PurchaseInvoice(BuyingController):
 								"project": item.project
 							}, account_currency)
 						)
-					if item.is_payable_tax:
+					elif item.is_payable_tax:
 						gl_entries.append(
 							self.get_gl_dict({
 								"account": item.payable_tax_account,
