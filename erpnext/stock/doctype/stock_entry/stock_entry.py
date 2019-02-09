@@ -528,7 +528,8 @@ class StockEntry(StockController):
 	def get_item_details(self, args=None, for_update=False):
 		item = frappe.db.sql("""select stock_uom, description, image, item_name,
 				expense_account, buying_cost_center, item_group, has_serial_no,
-				has_batch_no, sample_quantity
+				has_batch_no, sample_quantity, has_batch_no, create_new_batch, 
+                batch_naming_series, shelf_life
 			from `tabItem`
 			where name = %s
 				and disabled=0
@@ -550,7 +551,11 @@ class StockEntry(StockController):
 			'qty'					: 0,
 			'transfer_qty'			: 0,
 			'conversion_factor'		: 1,
+            'has_batch_no'          : item.has_batch_no,
+            'create_new_batch'      : item.create_new_batch,
+            'batch_naming_series'   : item.batch_naming_series,
 			'batch_no'				: '',
+            'shelf_life'            : item.shelf_life,
 			'actual_qty'			: 0,
 			'basic_rate'			: 0,
 			'serial_no'				: '',
