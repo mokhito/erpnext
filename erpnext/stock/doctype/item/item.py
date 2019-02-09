@@ -834,3 +834,7 @@ def check_stock_uom_with_bin(item, stock_uom):
 
 	if not matched:
 		frappe.throw(_("Default Unit of Measure for Item {0} cannot be changed directly because you have already made some transaction(s) with another UOM. You will need to create a new Item to use a different Default UOM.").format(item))
+
+@frappe.whitelist()
+def get_batch_naming_series():
+    return frappe.get_meta("Batch").get_field("naming_series").options or ""

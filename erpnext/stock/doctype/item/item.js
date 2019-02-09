@@ -13,6 +13,13 @@ frappe.ui.form.on("Item", {
 	},
 	onload: function(frm) {
 		erpnext.item.setup_queries(frm);
+
+		if (frm.doc.create_new_batch) {
+			erpnext.item.get_batch_ns(frm);
+		}
+		
+		frm.toggle_reqd('batch_naming_series', frm.doc.create_new_batch);
+
 		if (frm.doc.variant_of){
 			frm.fields_dict["attributes"].grid.set_column_disp("attribute_value", true);
 		}
@@ -113,6 +120,14 @@ frappe.ui.form.on("Item", {
 		['is_stock_item', 'has_serial_no', 'has_batch_no'].forEach((fieldname) => {
 			frm.set_df_property(fieldname, 'read_only', stock_exists);
 		});
+	},
+
+	create_new_batch: function(frm) {
+		if (frm.doc.create_new_batch) {
+			erpnext.item.get_batch_ns(frm);
+		}
+
+		frm.toggle_reqd('batch_naming_series', frm.doc.create_new_batch);
 	},
 
 	validate: function(frm){
@@ -649,5 +664,18 @@ $.extend(erpnext.item, {
 			frm.toggle_display("attributes", false);
 		}
 		frm.layout.refresh_sections();
+	},
+
+	get_batch_ns: function(frm) {
+		frappe.call({
+			method: "erpnext.stock.doctype.item.item.get_batch_naming_series",
+			args: {
+				item: frm.doc.name
+			},
+			callback: function (r) {
+				frm.set_df_property('batch_naming_series', 'options', r.message.split("\n"));
+				frm.refresh_field('batch_naming_series');
+			}
+		})
 	}
 });
