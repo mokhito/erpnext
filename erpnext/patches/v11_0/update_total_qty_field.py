@@ -42,6 +42,9 @@ def execute():
 			for d in batch_transactions:
 				values.append("('{}', {})".format(d.parent, d.qty))
 			conditions = ",".join(values)
+            frappe.db.sql("""
+                ALTER TABLE `tab{}` MODIFY COLUMN total_qty decimal(18,6) DEFAULT 0.0
+			""".format(doctype))
 			frappe.db.sql("""
 				INSERT INTO `tab{}` (name, total_qty) VALUES {}
 				ON DUPLICATE KEY UPDATE name = VALUES(name), total_qty = VALUES(total_qty)
