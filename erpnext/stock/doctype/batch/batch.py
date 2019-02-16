@@ -84,7 +84,7 @@ def get_batch_naming_series():
 
 class Batch(Document):
     def autoname(self):
-          """Generate random ID for batch if not specified"""
+        """Generate random ID for batch if not specified"""
         if not self.batch_id:
             create_new_batch, batch_number_series = frappe.db.get_value('Item', self.item, 
                 ['create_new_batch', 'batch_number_series'])
@@ -182,7 +182,7 @@ def get_batches_by_oldest(item_code, warehouse):
 
 @frappe.whitelist()
 def split_batch(batch_no, item_code, warehouse, qty, new_batch_id=None):
-      """Split the batch into a new batch"""
+    """Split the batch into a new batch"""
     batch = frappe.get_doc(dict(doctype='Batch', item=item_code, batch_id=new_batch_id)).insert()
     stock_entry = frappe.get_doc(dict(
         doctype='Stock Entry',
