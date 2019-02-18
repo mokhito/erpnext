@@ -103,7 +103,6 @@ class Batch(Document):
 
     def onload(self):
         self.image = frappe.db.get_value('Item', self.item, 'image')
-        self.naming_series = frappe.db.get_value('Item', self.item, 'batch_naming_series')
 
     def after_delete(self):
           revert_series_if_last(get_batch_naming_series(), self.name)
