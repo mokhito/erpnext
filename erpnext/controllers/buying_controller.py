@@ -526,7 +526,6 @@ class BuyingController(StockController):
             field = 'purchase_invoice' if self.doctype == 'Purchase Invoice' else 'purchase_receipt'
 
             self.process_fixed_asset()
-            print(field)
             self.update_fixed_asset(field)
 
         update_last_purchase_rate(self, is_submit = 1)
