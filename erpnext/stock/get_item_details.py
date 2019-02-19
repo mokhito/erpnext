@@ -247,10 +247,11 @@ def get_basic_details(args, item):
 		"warehouse": warehouse,
 		"income_account": get_default_income_account(args, item_defaults, item_group_defaults),
 		"expense_account": get_default_expense_account(args, item_defaults, item_group_defaults),
-        "is_refundable": item.is_refundable,
-		"is_payable_tax": item.is_payable_tax,
-		"receivable_account": get_default_receivable_account(args, item),
-		"payable_tax_account": get_default_payable_tax_account(args, item),
+        "is_refundable": get_default_is_refundable(args, item_defaults, item_group_defaults),
+		"is_payable_tax": get_default_is_payable_tax(args, item_defaults, item_group_defaults),
+		"receivable_account": get_default_receivable_account(args, item_defaults, item_group_defaults),
+        "payable_account": get_default_payable_account(args, item_defaults, item_group_defaults),
+		"payable_tax_account": get_default_payable_tax_account(args, item_defaults, item_group_defaults),
 		"cost_center": get_default_cost_center(args, item_defaults, item_group_defaults),
 		'has_serial_no': item.has_serial_no,
 		'has_batch_no': item.has_batch_no,
@@ -349,6 +350,31 @@ def get_default_expense_account(args, item, item_group):
 		or item_group.get("expense_account")
 		or args.expense_account)
 
+def get_default_is_refundable(args, item, item_group):
+  	return (item.get("is_refundable")
+		or item_group.get("is_refundable")
+		or args.is_refundable)
+
+def get_default_is_payable_tax(args, item, item_group):
+  	return (item.get("is_payable_tax")
+		or item_group.get("is_payable_tax")
+		or args.is_payable_tax)
+
+def get_default_receivable_account(args, item, item_group):
+  	return (item.get("receivable_account")
+		or item_group.get("receivable_account")
+		or args.receivable_account)
+
+def get_default_payable_account(args, item, item_group):
+  	return (item.get("payable_account")
+		or item_group.get("payable_account")
+		or args.payable_account)
+
+def get_default_payable_tax_account(args, item, item_group):
+  	return (item.get("payable_tax_account")
+		or item_group.get("payable_tax_account")
+		or args.payable_tax_account)
+
 def get_default_deferred_account(args, item, fieldname=None):
 	if item.get("enable_deferred_revenue") or item.get("enable_deferred_expense"):
 		return (item.get(fieldname)
@@ -356,14 +382,6 @@ def get_default_deferred_account(args, item, fieldname=None):
 			or frappe.get_cached_value('Company',  args.company,  "default_"+fieldname))
 	else:
 		return None
-
-def get_default_receivable_account(args, item):
-	return (item.receivable_account
-		or args.receivable_account)
-
-def get_default_payable_tax_account(args, item):
-	return (item.payable_tax_account
-		or args.payable_tax_account)
 
 def get_default_cost_center(args, item, item_group):
 	cost_center = None

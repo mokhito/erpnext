@@ -247,21 +247,27 @@ $.extend(erpnext.item, {
 			}
 		}
 
-		frm.fields_dict['receivable_account'].get_query = function(doc) {
+		frm.fields_dict["item_defaults"].grid.get_field("receivable_account").get_query = function(doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
 			return {
-				query: "erpnext.controllers.queries.get_receivable_account"
+				query: "erpnext.controllers.queries.get_receivable_account",
+				filters: { company: row.company }
 			}
 		}
 
-		frm.fields_dict['payable_tax_account'].get_query = function(doc) {
+		frm.fields_dict["item_defaults"].grid.get_field("payable_account").get_query = function(doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
 			return {
-				query: "erpnext.controllers.queries.get_payable_tax_account"
+				query: "erpnext.controllers.queries.get_payable_account",
+				filters: { company: row.company }
 			}
 		}
-		
-		frm.fields_dict['payable_account'].get_query = function(doc) {
+
+		frm.fields_dict["item_defaults"].grid.get_field("payable_tax_account").get_query = function(doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
 			return {
-				query: "erpnext.controllers.queries.get_payable_account"
+				query: "erpnext.controllers.queries.get_payable_tax_account",
+				filters: { company: row.company }
 			}
 		}
 

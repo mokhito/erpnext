@@ -291,7 +291,8 @@ def make_return_doc(doctype, source_name, target_doc=None):
 			"field_map": {
 				"serial_no": "serial_no",
 				"batch_no": "batch_no",
-				"is_refundable": "is_refundable"
+				"is_refundable": "is_refundable",
+                "is_payable_tax": "is_payable_tax"
 			},
 			"postprocess": update_item
 		},
