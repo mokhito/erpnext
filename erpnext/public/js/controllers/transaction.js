@@ -394,7 +394,6 @@ erpnext.TransactionController = erpnext.taxes_and_totals.extend({
 		if(['Sales Invoice'].includes(this.frm.doc.doctype)) {
 			update_stock = cint(me.frm.doc.update_stock);
       show_batch_dialog = update_stock;
-      warehouse = me.frm.doc.default_source_warehouse;
 		} else if((this.frm.doc.doctype === 'Purchase Receipt' && me.frm.doc.is_return) ||
 			this.frm.doc.doctype === 'Delivery Note') {
 			show_batch_dialog = 1;
