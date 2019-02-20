@@ -90,8 +90,8 @@ class PurchaseInvoice(BuyingController):
         self.validate_with_previous_doc()
         self.validate_uom_is_integer("uom", "qty")
         self.validate_uom_is_integer("stock_uom", "stock_qty")
-        self.set_expense_account(for_validate=True)
-        self.set_against_expense_account()
+        self.set_account(for_validate=True)
+        self.set_against_accounts()
         self.validate_write_off_account()
         self.validate_multiple_billing("Purchase Receipt", "pr_detail", "amount", "items")
         self.validate_fixed_asset()
@@ -129,6 +129,9 @@ class PurchaseInvoice(BuyingController):
             self.due_date = get_due_date(self.posting_date, "Supplier", self.supplier, self.company,  self.bill_date)
 
         super(PurchaseInvoice, self).set_missing_values(for_validate)
+
+    def set_pr_flag(self):
+        self.has_purchase_receipt = 1
 
     def check_conversion_rate(self):
         default_currency = erpnext.get_company_currency(self.company)
@@ -200,7 +203,7 @@ class PurchaseInvoice(BuyingController):
             if not d.item_code:
                 frappe.msgprint(_("Item Code required at Row No {0}").format(d.idx), raise_exception=True)
 
-    def set_expense_account(self, for_validate=False):
+    def set_account(self, for_validate=False):
         auto_accounting_for_stock = erpnext.is_perpetual_inventory_enabled(self.company)
 
         if auto_accounting_for_stock:
@@ -225,7 +228,8 @@ class PurchaseInvoice(BuyingController):
             if auto_accounting_for_stock and item.item_code in stock_items \
                 and self.is_opening == 'No' and not item.is_fixed_asset \
                 and (not item.po_detail or
-                    not frappe.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")):
+                        not frappe.db.get_value("Purchase Order Item", item.po_detail, "delivered_by_supplier")) \
+                and not item.is_refundable and not item.is_payable_tax:
 
                 if self.update_stock:
                     item.expense_account = warehouse_account[item.warehouse]["account"]
@@ -240,7 +244,7 @@ class PurchaseInvoice(BuyingController):
             elif not (item.is_refundable or item.is_payable_tax) and not item.expense_account and for_validate:
                 throw(_("Expense account is mandatory for item {0}").format(item.item_code or item.item_name))
 
-    def set_against_expense_account(self):
+    def set_against_accounts(self):
         against_accounts = []
         for item in self.get("items"):
             if item.is_refundable and item.receivable_account not in against_accounts:
@@ -250,7 +254,7 @@ class PurchaseInvoice(BuyingController):
             elif not (item.is_refundable or item.is_payable_tax) and item.expense_account not in against_accounts:
                 against_accounts.append(item.expense_account)
 
-        self.against_expense_account = ",".join(against_accounts)
+        self.against_accounts = ",".join(against_accounts)
 
     def po_required(self):
         if frappe.db.get_value("Buying Settings", None, "po_required") == 'Yes':
@@ -342,11 +346,35 @@ class PurchaseInvoice(BuyingController):
             from erpnext.stock.doctype.serial_no.serial_no import update_serial_nos_after_submit
             update_serial_nos_after_submit(self, "items")
 
+        if self.update_purchase_receipt == 1:
+            self.update_sl_valuation()
+
         # this sequence because outstanding may get -negative
         self.make_gl_entries()
 
         self.update_project()
         update_linked_invoice(self.doctype, self.name, self.inter_company_invoice_reference)
+
+    def update_sl_valuation(self):
+        for item in self.get("items"):
+            pr = item.purchase_receipt
+            pr_doc = frappe.get_doc("Purchase Receipt", pr)
+        
+            for pr_item in pr_doc.get("items"):
+                if item.item_code == pr_item.item_code:
+                    pr_item.valuation_rate = item.rate
+            # save will update item valuation rate in PR
+            pr_doc.save()
+            # manually set state of PR to 'cancelled' in order to remove
+            # stock ledger and general ledger entries related to PR
+            pr_doc.docstatus = 2
+            pr_doc.update_stock_ledger(allow_negative_stock=True, via_landed_cost_voucher=True)
+            pr_doc.make_gl_entries_on_cancel(repost_future_gle=False)
+            # now we manually set state of PR to 'submitted' in order to add
+            # updated stock ledger and general ledger entries related to PR
+            pr_doc.docstatus = 1
+            pr_doc.update_stock_ledger(via_landed_cost_voucher=True)
+            pr_doc.make_gl_entries()
 
     def make_gl_entries(self, gl_entries=None, repost_future_gle=True, from_repost=False):
         if not self.grand_total:
@@ -409,7 +437,7 @@ class PurchaseInvoice(BuyingController):
                     "account": self.credit_to,
                     "party_type": "Supplier",
                     "party": self.supplier,
-                    "against": self.against_expense_account,
+                    "against": self.against_accounts,
                     "credit": grand_total_in_company_currency,
                     "credit_in_account_currency": grand_total_in_company_currency \
                         if self.party_account_currency==self.company_currency else grand_total,
@@ -440,7 +468,7 @@ class PurchaseInvoice(BuyingController):
                     # warehouse account
                     warehouse_debit_amount = self.make_stock_adjustment_entry(gl_entries,
                         item, voucher_wise_stock_value, account_currency)
-                    
+
                     if item.is_refundable:
                         gl_entries.append(
                             self.get_gl_dict({
@@ -827,6 +855,7 @@ class PurchaseInvoice(BuyingController):
         if self.update_stock == 1:
             self.update_stock_ledger()
 
+        self.set_against_accounts()
         self.make_gl_entries_on_cancel()
         self.update_project()
         frappe.db.set(self, 'status', 'Cancelled')
