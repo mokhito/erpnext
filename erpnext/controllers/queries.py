@@ -406,8 +406,7 @@ def get_payable_account(doctype, txt, searchfield, start, page_len, filters):
 	if filters.get("company"):
 		condition += "and tabAccount.company = %(company)s"
 	return frappe.db.sql("""select tabAccount.name from `tabAccount`
-			where tabAccount.account_type = "Payable"
-				and tabAccount.is_group=0
+			where and tabAccount.is_group=0
 				and tabAccount.`{key}` LIKE %(txt)s
 				{condition} {match_condition}
 			order by idx desc, name"""
@@ -424,8 +423,7 @@ def get_payable_tax_account(doctype, txt, searchfield, start, page_len, filters)
 	if filters.get("company"):
 		condition += "and tabAccount.company = %(company)s"
 	return frappe.db.sql("""select tabAccount.name from `tabAccount`
-			where tabAccount.account_type = "Tax"
-				and tabAccount.is_group=0
+			where tabAccount.is_group=0
 				and tabAccount.`{key}` LIKE %(txt)s
 				{condition} {match_condition}
 			order by idx desc, name"""
