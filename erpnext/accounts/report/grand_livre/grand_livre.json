@@ -1,0 +1,37 @@
+{
+ "add_total_row": 1,
+ "creation": "2019-04-05 14:56:07.650317",
+ "disable_prepared_report": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": "Baladia Logo",
+ "modified": "2019-04-05 15:46:51.775987",
+ "modified_by": "Administrator",
+ "module": "Accounts",
+ "name": "Grand Livre",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Account",
+ "report_name": "Grand Livre",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Accounts Manager"
+  }
+ ]
+}
