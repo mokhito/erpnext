@@ -28,6 +28,13 @@ def execute(filters=None):
         "width": 200
     },
     {
+        "fieldname": "country",
+        "label": _("Pays"),
+        "fieldtype": "Data",
+        "options": "",
+        "width": 120
+    },
+    {
         "fieldname": "total_tvac",
         "label": _("Total TVAC"),
         "fieldtype": "Float",
@@ -36,77 +43,63 @@ def execute(filters=None):
     },
     {
         "fieldname": "grid_81",
-        "label": _("Grille 81"),
+        "label": _("Marchandises"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
         "fieldname": "grid_82",
-        "label": _("Grille 82"),
+        "label": _("Frais"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
         "fieldname": "grid_83",
-        "label": _("Grille 83"),
+        "label": _("Invest."),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
-        "fieldname": "notax",
+        "fieldname": "no_tax",
         "label": _("Non taxable"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
-        "fieldname": "grid_85",
-        "label": _("Notes de crédit belges"),
+        "fieldname": "intracom_tax",
+        "label": _("T.V.A. due intracom."),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
-        "fieldname": "intracom_total",
-        "label": _("Acquisitions intracom"),
+        "fieldname": "import_tax",
+        "label": _("T.V.A. due import"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
-        "fieldname": "grid_84",
-        "label": _("Notes de crédit intracom"),
+        "fieldname": "non_refundable",
+        "label": _("T.V.A. non déductible"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
-        "fieldname": "vat_intracom",
-        "label": _("TVA due intracom"),
+        "fieldname": "refundable",
+        "label": _("T.V.A. déductible"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
     },
     {
-        "fieldname": "vat_imports",
-        "label": _("TVA due importations"),
-        "fieldtype": "Float",
-        "options": "",
-        "width": 120
-    },
-    {
-        "fieldname": "vat_refundable",
-        "label": _("TVA déductible"),
-        "fieldtype": "Float",
-        "options": "",
-        "width": 120
-    },
-    {
-        "fieldname": "grid_63",
-        "label": _("TVA non déductible"),
+        "fieldname": "total_control",
+        "label": _("Total de contrôle"),
         "fieldtype": "Float",
         "options": "",
         "width": 120
@@ -123,7 +116,7 @@ def execute(filters=None):
 
 def get_invoices(filters):
     invoices = []
-    query = "SELECT posting_date, name, title, grand_total, net_total FROM `tabPurchase Invoice` WHERE status != 'Cancelled' AND status != 'Draft'"
+    query = "SELECT posting_date, name, title, grand_total, net_total, (SELECT country FROM `tabAddress` a WHERE name = pi.supplier_address) AS country FROM `tabPurchase Invoice` pi WHERE status != 'Cancelled' AND status != 'Draft'"
 
     if filters.from_date is not None:
         query += " AND posting_date >= '{}'".format(filters.from_date)
@@ -151,22 +144,23 @@ def get_invoices(filters):
             bins['misc'] += bins['investments']
             bins['investments'] = 0.0
 
+        total_control = bins['raw_materials'] + bins['misc'] + bins['investments'] + bins['no_tax'] - bins['intracom_tax'] - bins['import_tax'] + bins['non_refundable'] + bins['refundable']
+
         invoices.append([
             res[0],
             res[1],
             res[2],
+            res[5],
             res[3],
             bins['raw_materials'],
             bins['misc'],
             bins['investments'],
-            "notax",
-            "cn",
-            "",
-            "",
+            bins['no_tax'],
             bins['intracom_tax'],
             bins['import_tax'],
+            bins['non_refundable'],
             bins['refundable'],
-            bins['non_refundable']
+            total_control
         ])
 
     return invoices
@@ -213,9 +207,9 @@ def get_bins(invoice_ref):
         elif grid_no == "59":
             bins['refundable'] += entry[1]
         elif grid_no == "55":
-            bins['intracom_tax'] += entry[1]
+            bins['intracom_tax'] += entry[2]
         elif grid_no == "57":
-            bins['import_tax'] += entry[1]
+            bins['import_tax'] += entry[2]
         elif grid_no == "998":
             bins['no_tax'] += entry[1]
         elif grid_no == "999":
