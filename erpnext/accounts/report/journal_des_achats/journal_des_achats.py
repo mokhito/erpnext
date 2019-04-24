@@ -116,7 +116,7 @@ def execute(filters=None):
 
 def get_invoices(filters):
     invoices = []
-    query = "SELECT posting_date, name, title, grand_total, net_total, (SELECT country FROM `tabAddress` a WHERE name = pi.supplier_address) AS country FROM `tabPurchase Invoice` pi WHERE status != 'Cancelled' AND status != 'Draft'"
+    query = "SELECT posting_date, name, title, grand_total, net_total, (SELECT country FROM `tabAddress` a WHERE name = pi.supplier_address), is_return AS country FROM `tabPurchase Invoice` pi WHERE status != 'Cancelled' AND status != 'Draft'"
 
     if filters.from_date is not None:
         query += " AND posting_date >= '{}'".format(filters.from_date)
@@ -126,7 +126,7 @@ def get_invoices(filters):
     res_invoices = frappe.db.sql(query)
 
     for res in res_invoices:
-        bins = get_bins(res[1])
+        bins = get_bins(res[1], res[6])
 
         # if there is a mix of expenses, follow the belgian administration rule
         # of 50% (see book "Apprendre la T.V.A.")
@@ -165,7 +165,7 @@ def get_invoices(filters):
 
     return invoices
 
-def get_bins(invoice_ref):
+def get_bins(invoice_ref, is_return):
     gl_entries = []
     query = "SELECT (SELECT grid_no FROM `tabAccount VAT Allocation` WHERE parent = a.name), e.debit, e.credit, a.name FROM `tabGL Entry` e INNER JOIN `tabAccount` a ON a.name = e.account WHERE voucher_no = '{}' AND a.account_number != '440'".format(invoice_ref)
     gl_entries = frappe.db.sql(query)
@@ -197,23 +197,30 @@ def get_bins(invoice_ref):
             curr_account = res[0]
             grid_no = res[1]
         
+        if is_return:
+            debit = -entry[2]
+            credit = -entry[1]
+        else:
+            debit = entry[1]
+            credit = entry[2]
+
         # belgian vat return logic
         if grid_no == "81":
-            bins['raw_materials'] += entry[1]
+            bins['raw_materials'] += debit
         elif grid_no == "82":
-            bins['misc'] += entry[1]
+            bins['misc'] += debit
         elif grid_no == "83":
-            bins['investments'] += entry[1]
+            bins['investments'] += debit
         elif grid_no == "59":
-            bins['refundable'] += entry[1]
+            bins['refundable'] += debit
         elif grid_no == "55":
-            bins['intracom_tax'] += entry[2]
+            bins['intracom_tax'] += credit
         elif grid_no == "57":
-            bins['import_tax'] += entry[2]
+            bins['import_tax'] += credit
         elif grid_no == "998":
-            bins['no_tax'] += entry[1]
+            bins['no_tax'] += debit
         elif grid_no == "999":
-            bins['non_refundable'] += entry[1]
+            bins['non_refundable'] += debit
         else:
             frappe.throw("No VAT account for account {}".format(entry[3]))
 
