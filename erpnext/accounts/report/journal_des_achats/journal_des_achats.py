@@ -116,7 +116,7 @@ def execute(filters=None):
 
 def get_invoices(filters):
     invoices = []
-    query = "SELECT posting_date, name, title, grand_total, net_total, (SELECT country FROM `tabAddress` a WHERE name = pi.supplier_address), is_return AS country FROM `tabPurchase Invoice` pi WHERE status != 'Cancelled' AND status != 'Draft'"
+    query = "SELECT posting_date, name, title, grand_total, net_total, (SELECT country FROM `tabAddress` a WHERE name = pi.supplier_address) AS country, is_return, base_grand_total FROM `tabPurchase Invoice` pi WHERE status != 'Cancelled' AND status != 'Draft'"
 
     if filters.from_date is not None:
         query += " AND posting_date >= '{}'".format(filters.from_date)
@@ -145,13 +145,18 @@ def get_invoices(filters):
             bins['investments'] = 0.0
 
         total_control = bins['raw_materials'] + bins['misc'] + bins['investments'] + bins['no_tax'] - bins['intracom_tax'] - bins['import_tax'] + bins['non_refundable'] + bins['refundable']
+        grand_total = res[7] if res[7] > 0.0 else res[3]
+
+        test_res = abs(grand_total - total_control)
+        if test_res > 0.01:
+            frappe.throw("Control failed for invoice {}. Grand total is {} and control is {}".format(res[1], grand_total, total_control))
 
         invoices.append([
             res[0],
             res[1],
             res[2],
             res[5],
-            res[3],
+            grand_total,
             bins['raw_materials'],
             bins['misc'],
             bins['investments'],
@@ -167,7 +172,7 @@ def get_invoices(filters):
 
 def get_bins(invoice_ref, is_return):
     gl_entries = []
-    query = "SELECT (SELECT grid_no FROM `tabAccount VAT Allocation` WHERE parent = a.name), e.debit, e.credit, a.name FROM `tabGL Entry` e INNER JOIN `tabAccount` a ON a.name = e.account WHERE voucher_no = '{}' AND a.account_number != '440'".format(invoice_ref)
+    query = "SELECT (SELECT grid_no FROM `tabAccount VAT Allocation` WHERE parent = a.name), e.debit, e.credit, a.name, a.account_number FROM `tabGL Entry` e INNER JOIN `tabAccount` a ON a.name = e.account WHERE voucher_no = '{}'".format(invoice_ref)
     gl_entries = frappe.db.sql(query)
 
     bins = {
@@ -184,6 +189,13 @@ def get_bins(invoice_ref, is_return):
     for entry in gl_entries:
         grid_no = entry[0]
         curr_account = entry[3]
+        account_no = entry[4]
+
+        # Skip Fournisseurs because we will get the tax amount according to the 
+        # different items on the invoice.
+        # Also skip payment accounts as these are not needed for VAT calculation.
+        if account_no == "440" or account_no == "5501" or account_no == "570":
+            continue
 
         # if account has no VAT grid number, check if its parents have one
         while (grid_no is None):
